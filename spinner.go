@@ -2,6 +2,7 @@ package spinner
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -11,54 +12,90 @@ import (
 )
 
 var (
-	defaultZeroFrame = " "
-	defaultFrames    = []string{"—", "\\", "|", "/", "-", "\\", "|", "/"}
-	defaultInterval  = time.Millisecond * 300
+	// DefaultOutput represents io.Writer which will be used for new spinners.
+	DefaultOutput = os.Stderr
+
+	// DefaultEmptyFrame represents string representation of frame which will
+	// be showed when spinner is finished.
+	DefaultEmptyFrame = " "
+
+	// DefaultFrames represents set of frames which will be iterated in cycle.
+	DefaultFrames = []string{"—", "\\", "|", "/", "-", "\\", "|", "/"}
+
+	// DefaultInterval represents time.Duration of spin iteration.
+	DefaultInterval = time.Millisecond * 300
 )
 
 type Spinner struct {
-	status    string
-	frames    []string
-	interval  time.Duration
-	process   *sync.WaitGroup
-	active    bool
-	zeroframe string
-	iteration int
+	output     io.Writer
+	status     string
+	frames     []string
+	interval   time.Duration
+	process    *sync.WaitGroup
+	active     bool
+	emptyFrame string
+	iteration  int
 }
 
 func New() *Spinner {
 	spinner := &Spinner{
-		frames:    defaultFrames,
-		interval:  defaultInterval,
-		process:   &sync.WaitGroup{},
-		zeroframe: defaultZeroFrame,
+		output:     DefaultOutput,
+		frames:     DefaultFrames,
+		interval:   DefaultInterval,
+		process:    &sync.WaitGroup{},
+		emptyFrame: DefaultEmptyFrame,
 	}
 
 	return spinner
 }
 
-func (spinner *Spinner) Schedule() {
-	spinner.Update()
-	if spinner.active {
-		spinner.NewLine()
+func (spinner *Spinner) SetOutput(output io.Writer) *Spinner {
+	spinner.output = output
+	return spinner
+}
+
+func (spinner *Spinner) SetStatus(status string) *Spinner {
+	spinner.status = status
+	return spinner
+}
+
+func (spinner *Spinner) SetFrames(frame ...string) *Spinner {
+	spinner.frames = frame
+	return spinner
+}
+
+func (spinner *Spinner) SetInterval(interval time.Duration) *Spinner {
+	spinner.interval = interval
+	return spinner
+}
+
+func (spinner *Spinner) SetEmptyFrame(frame string) *Spinner {
+	spinner.emptyFrame = frame
+	return spinner
+}
+
+func (spinner *Spinner) IsActive() bool {
+	return spinner.active
+}
+
+func (spinner *Spinner) Spin() {
+	spinner.spin()
+	if !spinner.active {
+		fmt.Fprint(spinner.output, "\n")
 		spinner.process.Done()
 	}
 }
 
-func (spinner *Spinner) Update() {
-	frame := spinner.zeroframe
+func (spinner *Spinner) spin() {
+	frame := spinner.emptyFrame
 	if spinner.active {
 		frame = spinner.frames[spinner.iteration]
 	}
 
 	fmt.Fprintf(
-		os.Stdout,
+		spinner.output,
 		"\r"+spinner.status+frame+getSpinnerSuffix(len(spinner.status)),
 	)
-}
-
-func (spinner *Spinner) NewLine() {
-	fmt.Fprint(os.Stdout, "\n")
 }
 
 func (spinner *Spinner) Start() {
@@ -68,12 +105,12 @@ func (spinner *Spinner) Start() {
 	go func() {
 		spinner.iteration = 0
 		for spinner.active {
-			spinner.Schedule()
+			spinner.Spin()
 			spinner.iteration = (spinner.iteration + 1) % len(spinner.frames)
 			time.Sleep(spinner.interval)
 		}
 
-		spinner.Schedule()
+		spinner.Spin()
 	}()
 }
 
@@ -82,8 +119,9 @@ func (spinner *Spinner) Stop() {
 	spinner.process.Wait()
 }
 
-func (spinner *Spinner) Call(status string, methods ...func() error) error {
+func (spinner *Spinner) Call(methods ...func() error) error {
 	spinner.Start()
+	defer spinner.Stop()
 
 	for _, method := range methods {
 		err := method()
@@ -91,8 +129,6 @@ func (spinner *Spinner) Call(status string, methods ...func() error) error {
 			return err
 		}
 	}
-
-	spinner.Stop()
 
 	return nil
 }
