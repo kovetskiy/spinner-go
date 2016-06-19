@@ -20,7 +20,7 @@ var (
 	DefaultEmptyFrame = " "
 
 	// DefaultFrames represents set of frames which will be iterated in cycle.
-	DefaultFrames = []string{"—", "\\", "|", "/", "-", "\\", "|", "/"}
+	DefaultFrames = []string{"/", "-", "\\", "|", "/", "-", "\\", "|"}
 
 	// DefaultInterval represents time.Duration of spin iteration.
 	DefaultInterval = time.Millisecond * 300
