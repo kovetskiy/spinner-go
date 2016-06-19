@@ -9,6 +9,11 @@ var (
 	spinner = New()
 )
 
+func SetActive(active bool) *Spinner {
+	spinner.active = active
+	return spinner
+}
+
 func SetOutput(output io.Writer) *Spinner {
 	spinner.output = output
 	return spinner
