@@ -86,6 +86,11 @@ func (spinner *Spinner) Spin() {
 	}
 }
 
+func (spinner *Spinner) SetActive(active bool) *Spinner {
+	spinner.active = active
+	return spinner
+}
+
 func (spinner *Spinner) spin() {
 	frame := spinner.emptyFrame
 	if spinner.active {
