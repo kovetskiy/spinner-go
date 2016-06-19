@@ -35,6 +35,7 @@ type Spinner struct {
 	active     bool
 	emptyFrame string
 	iteration  int
+	started    bool
 }
 
 func New() *Spinner {
@@ -80,9 +81,14 @@ func (spinner *Spinner) IsActive() bool {
 
 func (spinner *Spinner) Spin() {
 	spinner.spin()
+	spinner.iteration = (spinner.iteration + 1) % len(spinner.frames)
 	if !spinner.active {
-		fmt.Fprint(spinner.output, "\n")
-		spinner.process.Done()
+		if spinner.status != "" {
+			fmt.Fprint(spinner.output, "\n")
+		}
+		if spinner.started {
+			spinner.process.Done()
+		}
 	}
 }
 
@@ -104,6 +110,7 @@ func (spinner *Spinner) spin() {
 }
 
 func (spinner *Spinner) Start() {
+	spinner.started = true
 	spinner.active = true
 	spinner.process.Add(1)
 
@@ -111,7 +118,6 @@ func (spinner *Spinner) Start() {
 		spinner.iteration = 0
 		for spinner.active {
 			spinner.Spin()
-			spinner.iteration = (spinner.iteration + 1) % len(spinner.frames)
 			time.Sleep(spinner.interval)
 		}
 
