@@ -105,7 +105,7 @@ func (spinner *Spinner) spin() {
 
 	fmt.Fprint(
 		spinner.output,
-		"\r"+spinner.status+frame+getSpinnerSuffix(len(spinner.status)),
+		"\r"+frame+spinner.status+getSpinnerSuffix(len(spinner.status)),
 	)
 }
 
